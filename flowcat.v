@@ -33,7 +33,7 @@ Inductive expr: Type :=
 TODO
 Don't know coq well enough to generalize this stuff for mlscat and flowcat.
 to generalize for mlscat for instance I need a union type that fails
-expressiosn for read control checks (getting something from memory)
+expressiosn for read control checks (getting FlowExprSuccessthing from memory)
 and programs (reductions) that can fail write control checks (assignments)
 *)
 Inductive prog : Type :=
@@ -124,17 +124,27 @@ Fixpoint eval (m : memory) (e : expr) : option value :=
   end.
 
 Inductive flowcatExprResult :=
-  | FlowTypeError
+  | FlowUndefined (* Variable is not defined*)
+  | FlowTypeError (* negative boolean or non sense*)
   | FlowReadControlCheckFail
   | FlowExprSuccess (v: value).
 
-Fixpoint flowcatEval (m : memory) (e : expr) : floatcatExprResult :=
+Definition flowexprres_sequence_map (f : value -> value) (fe : flowcatExprResult) : flowcatExprResult :=
+  match fe with
+  | FlowExprSuccess v => FlowExprSuccess (f v)
+  | _ => fe
+  end.
+
+Fixpoint flowcatEval (m : memory) (e : expr) : flowcatExprResult :=
   match e with
-    | ReadVar v => m v
-    | Value v => Some v
-    | Not e' => 
-      match eval m e' with
-        | Some (Bool b) => Some (Bool (negb b))
+    | ReadVar v => 
+      match (m v) with
+        | Some v' => FlowExprSuccess v'
+        | None => FlowUndefined
+      end
+    | Value v => FlowExprSuccess v
+    | Not e' => match eval m e' with
+        | FlowExprSuccess (Bool b) => Some (Bool (negb b))
         | _ => None
       end
     | And e1 e2 => 
@@ -174,21 +184,6 @@ Fixpoint flowcatEval (m : memory) (e : expr) : floatcatExprResult :=
         | _ => None
       end
   end.
-
-
-
-Fixpoint minicat_eval (m : memory) (p : prog) : memory * prog :=
-  match p with
-    | Done => (m, Done)
-    | Stuck => (m, Stuck)
-    | TypeError => (m, TypeError)
-    | Assign v e p => 
-      match eval m e with
-        | Some v' => minicat_eval(update m v v') p
-        | None => (m, TypeError)
-      end
-  end.
-
 
 
 
