@@ -37,24 +37,14 @@ Inductive expr: Type :=
   | IfThenElse (e1 : expr) (e2 : expr) (e3 : expr).
 
 
-
-(*
-TODO
-Don't know coq well enough to generalize this stuff for mlscat and flowcat.
-to generalize for mlscat for instance I need a union type that fails
-expressiosn for read control checks (getting FlowExprSuccessthing from memory)
-and programs (reductions) that can fail write control checks (assignments)
-TODO handle unassigned memories
-*)
-
-Inductive Assignment : Type := Assignment (variable: variable) (expr : expr).
+Inductive assignment : Type := Assignment (variable: variable) (expr : expr).
 
 Inductive prog : Type :=
   | Naught
-  | Step Assignment((v: variable) (e : expr)) (p : prog).
+  | Step (a : assignment) (p : prog).
 
 (* x = 4; y = 2;*)
-Definition example_program := Step (Assignment X (Nat 4)) (Step Assighment Y (Nat 2) Naught)
+Definition example_program := Step (Assignment X (Nat 4)) (Step Assignment Y (Nat 2) Naught).
 
 Inductive RuntimeState : Type := RuntimeState (memory: Memory) (program : prog).
 RuntimeState -> RuntimeState
@@ -93,10 +83,10 @@ Notation "x '⊢>' v ';' m" := (update m x v)
 
 Definition memory := partial_map value.
 
-Fixpoint reduce (s : RuntimeState) : RuntimeState :=
+Fixpoint reduce (s : Configuration) : Configuration :=
   update m (eval m a.expression)
 
-Fixpoint reduce_multi (s : RuntimeState) : RuntimeState := TODO.
+Fixpoint reduce_multi (s : Configuration) : Configuration := TODO.
 
 Fixpoint eval (m : memory) (e : expr) : option value :=
   match e with
