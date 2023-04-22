@@ -1,6 +1,5 @@
 Require Import Arith.
 
-
 Inductive value : Type :=
   | Nat (n : nat)
   | Bool (b : bool).
@@ -36,18 +35,11 @@ Inductive expr: Type :=
   | Compare (e1 : expr) (e2 : expr)
   | IfThenElse (e1 : expr) (e2 : expr) (e3 : expr).
 
-
-Inductive assignment : Type := Assignment (variable: variable) (expr : expr).
-
 Inductive prog : Type :=
   | Naught
-  | Step (a : assignment) (p : prog).
+  | Assignment (variable: variable) (expr: expr) (p : prog).
 
-(* x = 4; y = 2;*)
-Definition example_program := Step (Assignment X (Nat 4)) (Step Assignment Y (Nat 2) Naught).
-
-Inductive RuntimeState : Type := RuntimeState (memory: Memory) (program : prog).
-RuntimeState -> RuntimeState
+(* Definition reduction_step : Configuration := Configuration (memory) (program) *)
 
 Definition total_map (A : Type) := variable -> A.
 
@@ -73,7 +65,7 @@ Definition empty {A : Type} : partial_map A :=
 Notation "x '!->' v ';' m" := (t_update m x v)
                               (at level 100, v at next level, right associativity).
 
-
+(* Updates a map *)
 Definition update {A : Type} (m : partial_map A)
            (x : variable) (v : A) :=
   (x !-> Some v ; m).
@@ -83,10 +75,7 @@ Notation "x '⊢>' v ';' m" := (update m x v)
 
 Definition memory := partial_map value.
 
-Fixpoint reduce (s : Configuration) : Configuration :=
-  update m (eval m a.expression)
-
-Fixpoint reduce_multi (s : Configuration) : Configuration := TODO.
+Inductive Configuration : Type := MkConfiguration (m: memory) (p: prog).
 
 Fixpoint eval (m : memory) (e : expr) : option value :=
   match e with
@@ -134,6 +123,25 @@ Fixpoint eval (m : memory) (e : expr) : option value :=
         | _ => None
       end
   end.
+
+Fixpoint reduce (config : Configuration) : option Configuration :=
+  match config with
+  | MkConfiguration m (Assignment v e p) =>
+      match eval m e with
+      | None => None
+      | Some val => Some (MkConfiguration (update m v val) p)
+      end
+  | MkConfiguration m Naught => Some (MkConfiguration m Naught)
+  end.
+
+Fixpoint reduce_multi (s : Configuration) : option Configuration :=
+  match reduce s with
+  | None => None (* Stuck *)
+  | Some (MkConfiguration m Naught as nextConfig) => Some nextConfig
+  | Some nextConfiguration => reduce_multi nextConfiguration
+  end
+.
+
 
 (* Example of eval running on a memory and an expression *)
 
